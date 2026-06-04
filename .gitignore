@@ -179,3 +179,40 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+venv/
+__pycache__/
+*.pyc
+
+.env
+
+logs/
+cache/
+
+.idea/
+.vscode/
+
+database/*.db
+# Virtual Environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Database
+*.db
+
+# Logs
+logs/
+
+# Cache
+cache/
+
+# VS Code
+.vscode/
+
+# JetBrains
+.idea/
