@@ -1,4 +1,4 @@
-# app/handlers/users_handler.py
+# app/handlers/stats_handler.py
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -12,7 +12,7 @@ from database.database_manager import DatabaseManager
 db = DatabaseManager()
 
 
-async def users_command(
+async def stats_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -22,7 +22,7 @@ async def users_command(
     # ثبت لاگ
     write_log(
         user.id,
-        "/users"
+        "/stats"
     )
 
     if not is_admin(user.id):
@@ -35,6 +35,12 @@ async def users_command(
 
     users_count = db.get_users_count()
 
-    await update.message.reply_text(
-        f"👥 تعداد کاربران ثبت شده:\n\n{users_count}"
+    total_starts = db.get_total_starts()
+
+    text = (
+        "📊 آمار ربات\n\n"
+        f"👥 کاربران: {users_count}\n"
+        f"🚀 اجرای /start: {total_starts}"
     )
+
+    await update.message.reply_text(text)

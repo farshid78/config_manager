@@ -1,11 +1,11 @@
-# app/admin_manager.py
-
-from config.config import settings
+from config.admin_store import load_admins, save_admins
 
 
 def is_admin(user_id: int) -> bool:
-    """
-    بررسی ادمین بودن کاربر
-    """
+    return user_id in load_admins()
 
-    return user_id == settings.ADMIN_ID
+
+def add_admin(user_id: int):
+    admins = load_admins()
+    admins.add(user_id)
+    save_admins(admins)
