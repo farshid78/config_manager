@@ -1,18 +1,12 @@
 from scraper.auto_scraper import AutoScraper
-from app.bot import run_bot
+from app.bot import create_bot
 import threading
 import time
-
-
-def start_bot():
-    print("🤖 Bot starting...")
-    run_bot()
+import asyncio
 
 
 def start_scraper():
-
     print("🚀 Scraper starting...")
-
     scraper = AutoScraper(interval=300)
     scraper.start()
 
@@ -20,16 +14,7 @@ def start_scraper():
 if __name__ == "__main__":
 
     # -----------------------
-    # BOT THREAD
-    # -----------------------
-    bot_thread = threading.Thread(
-        target=start_bot,
-        daemon=True   # ✅ مهم: bot همیشه background باشه
-    )
-    bot_thread.start()
-
-    # -----------------------
-    # SCRAPER THREAD
+    # SCRAPER THREAD (background)
     # -----------------------
     scraper_thread = threading.Thread(
         target=start_scraper,
@@ -38,16 +23,12 @@ if __name__ == "__main__":
     scraper_thread.start()
 
     # -----------------------
-    # KEEP ALIVE LOOP
+    # BOT (main thread)
     # -----------------------
-    print("✅ System is running...")
+    print("🤖 Bot starting...")
+    application = create_bot()
+    print("🚀 Bot Started...")
+    application.run_polling()
 
-    try:
-        while True:
-            time.sleep(10)
-
-    except KeyboardInterrupt:
-        print("🛑 Shutting down...")
-        
     from utils.clean_ip_cleanup import cleanup_old_clean_ips
     cleanup_old_clean_ips()
