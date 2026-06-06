@@ -1,13 +1,20 @@
-# tests/test_admin.py
+import pytest
 
-from app.admin_manager import is_admin
+from core.config import get_settings
+from app.middlewares.auth import is_admin, is_owner
 
-from config.config import settings
+
+@pytest.mark.asyncio
+async def test_owner_is_admin():
+    settings = get_settings()
+    assert await is_owner(settings.owner_id) is True
 
 
-print("Admin ID:", settings.ADMIN_ID)
+@pytest.mark.asyncio
+async def test_unknown_user_is_not_admin():
+    from database.session import get_session_factory, init_db
 
-print(
-    "Is Admin:",
-    is_admin(settings.ADMIN_ID)
-)
+    await init_db()
+    factory = get_session_factory()
+    async with factory() as session:
+        assert await is_admin(session, 999999999999) is False

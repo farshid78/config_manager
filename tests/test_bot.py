@@ -1,3 +1,6 @@
-from app.bot import run_test
+from main import build_application
 
-run_test()
+
+def test_build_application():
+    app = build_application()
+    assert app is not None
