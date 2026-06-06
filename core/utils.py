@@ -13,8 +13,21 @@ import aiohttp
 
 from constants import COUNTRY_FLAGS, CONFIG_PATTERN
 
+# --- اعتبارسنجی IP (برای ماژول‌های مختلف) ---
+import ipaddress
+
+
+def is_valid_ip(ip: str) -> bool:
+    """اعتبارسنجی IPv4."""
+    try:
+        ipaddress.IPv4Address(ip.strip())
+        return True
+    except Exception:
+        return False
+
 # Rate limiting for geo API
 _geo_call_count = 0
+
 _geo_last_reset = 0
 _GEO_LIMIT_PER_MINUTE = 60
 _geo_lock = asyncio.Lock()
