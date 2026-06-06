@@ -62,7 +62,7 @@ class Broadcaster:
         async with aiohttp.ClientSession() as session:
             batch_count = 0
             while True:
-                item = await self.queue.get()
+                item = await self.queue.get_item()
                 if item is None:
                     self.queue.task_done()
                     break

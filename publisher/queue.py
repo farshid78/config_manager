@@ -23,15 +23,20 @@ class PublishQueue:
         self._running = False
 
     @classmethod
-    def get(cls) -> PublishQueue:
+    def get_instance(cls) -> PublishQueue:
         if cls._instance is None:
             cls._instance = PublishQueue()
         return cls._instance
 
+    @classmethod
+    def get(cls) -> PublishQueue:
+        """برای backward compatibility."""
+        return cls.get_instance()
+
     async def put(self, config: str, country_code: str = "UN") -> None:
         await self.queue.put(PublishItem(config=config, country_code=country_code))
 
-    async def get(self) -> PublishItem | None:
+    async def get_item(self) -> PublishItem | None:
         return await self.queue.get()
 
     def task_done(self) -> None:
