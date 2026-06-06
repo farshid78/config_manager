@@ -5,9 +5,9 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.bot.menus import (
+from app.bot.menus_refactor import (
     admin_panel_menu,
-    back_button,
+    back as back_button,
     clean_ip_menu,
     main_menu,
     vip_panel_menu,

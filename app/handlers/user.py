@@ -8,7 +8,7 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.bot.menus import country_menu, main_menu, protocol_menu
+from app.bot.menus_refactor import country_menu, main_menu, protocol_menu
 from app.middlewares.auth import is_admin
 from constants import EXPORT_DEFAULT_LAST, EXPORT_MAX_COUNT, EXPORT_MIN_COUNT
 from core.config import BASE_DIR

@@ -3,7 +3,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from app.bot.menus import main_menu
+from app.bot.menus_refactor import main_menu
 from app.handlers import admin, user
 from app.middlewares.auth import is_admin
 from database.session import get_session_factory
