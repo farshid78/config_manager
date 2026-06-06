@@ -77,6 +77,13 @@ async def remove_admin(session: AsyncSession, user_id: int) -> bool:
     return True
 
 
+async def list_admins_with_info(session: AsyncSession) -> list[Admin]:
+    result = await session.execute(
+        select(Admin).order_by(desc(Admin.added_at))
+    )
+    return list(result.scalars().all())
+
+
 # ─── VIP ─────────────────────────────────────────────
 
 

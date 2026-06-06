@@ -54,6 +54,8 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "admin_broadcast", "vip_panel", "vip_add", "vip_remove",
         "vip_list", "vip_broadcast", "clean_ip_menu", "clean_ip_upload",
         "list_clean_ip", "scraper_status", "scraper_toggle",
+        "ip_management_menu", "ip_single", "ip_bulk", "ip_file",
+        "list_admins", "remove_admin",
     }
     if data not in admin_routes:
         return False

@@ -41,6 +41,15 @@ def _build_export_file(configs: list, filename: str) -> Path:
         raise
 
 
+def _build_export_text(configs: list) -> str:
+    """ساخت متن از کانفیگ‌های watermarked."""
+    lines = []
+    for row in configs:
+        text = row.watermarked_config or row.raw_config
+        lines.append(text)
+    return "\n\n".join(lines)
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """دستور /start — ثبت کاربر و نمایش منو."""
     user = update.effective_user
@@ -104,10 +113,31 @@ async def user_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
             if not rows:
                 await query.message.reply_text("❌ کانفیگی یافت نشد.", reply_markup=main_menu(await _admin_flag(user_id)))
                 return True
-            path = _build_export_file(rows[:20], "last_20")
-            with open(path, "rb") as doc:
-                await query.message.reply_document(document=doc, caption="📦 آخرین ۲۰ کانفیگ")
-            await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+
+            # Build text from last 20
+            text = _build_export_text(rows[:20])
+
+            # Try to send as text message
+            if len(text) < 3800:
+                try:
+                    await query.message.reply_text(
+                        f"<pre>{text}</pre>",
+                        parse_mode="HTML"
+                    )
+                    await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+                except Exception:
+                    # Fallback to file if text too long
+                    logger.warning("Text message too long, falling back to file")
+                    path = _build_export_file(rows[:20], "last_20")
+                    with open(path, "rb") as doc:
+                        await query.message.reply_document(document=doc, caption="📦 آخرین ۲۰ کانفیگ")
+                    await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+            else:
+                # Send as file if too long
+                path = _build_export_file(rows[:20], "last_20")
+                with open(path, "rb") as doc:
+                    await query.message.reply_document(document=doc, caption="📦 آخرین ۲۰ کانفیگ")
+                await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
         except Exception as exc:
             logger.error("Error in last_20 export: {}", exc)
             await query.message.reply_text(f"❌ خطا: {exc}", reply_markup=main_menu(await _admin_flag(user_id)))

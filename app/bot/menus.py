@@ -82,7 +82,19 @@ def clean_ip_menu() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton("📄 آپلود فایل txt", callback_data="clean_ip_upload")],
         [InlineKeyboardButton("📋 تعداد IPها", callback_data="list_clean_ip")],
+        [InlineKeyboardButton("🌐 مدیریت IP پروکسی", callback_data="ip_management_menu")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="admin_panel")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def ip_management_menu() -> InlineKeyboardMarkup:
+    """منوی مدیریت IP برای اعمال بر روی کانفیگ‌ها."""
+    keyboard = [
+        [InlineKeyboardButton("➕ IP تکی", callback_data="ip_single")],
+        [InlineKeyboardButton("➕ لیست IP (متن)", callback_data="ip_bulk")],
+        [InlineKeyboardButton("📤 Upload IP (txt)", callback_data="ip_file")],
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="clean_ip_menu")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
