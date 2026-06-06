@@ -3,7 +3,6 @@ from core.utils import (
     detect_protocol,
     extract_host,
     extract_port,
-    _is_valid_ip,
     config_hash,
 )
 
