@@ -105,7 +105,7 @@ class TelegramChannelScraper:
             return configs[:max_configs]
         return configs
 
-    async def scrape_all(self, session: aioiohttp.ClientSession) -> dict[str, list[str]]:
+    async def scrape_all(self, session: aiohttp.ClientSession) -> dict[str, list[str]]:
         """scrape همه منابع — خروجی: {source: [configs]}"""
         results: dict[str, list[str]] = {}
 

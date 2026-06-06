@@ -319,7 +319,18 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     from core.config import BASE_DIR
     dest_dir = BASE_DIR / "data" / "clean_ips"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / document.file_name
+    # جلوگیری از path traversal: فقط basename و محدودسازی کاراکترهای مجاز
+    import re
+
+    original_name = document.file_name
+    safe_name = re.sub(r"[\\/]+", "_", original_name)
+    safe_name = safe_name.replace("..", "")
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", safe_name)
+    safe_name = safe_name[:120] if safe_name else "clean_ips.txt"
+    if not safe_name.lower().endswith(".txt"):
+        safe_name = safe_name + ".txt"
+
+    dest = dest_dir / safe_name
     await file.download_to_drive(str(dest))
 
     count = 0
