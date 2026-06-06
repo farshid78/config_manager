@@ -1,0 +1,55 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+.env
+data/
+logs/
+exports/
+cache/
+*.db
+*.db-journal
+*.log
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Tests
+tests/
+pytest.ini
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Misc
+.replit
+.sixth/
+.qodo/
+overview*.json
+overview*.puml

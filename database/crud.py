@@ -155,7 +155,7 @@ async def save_config(
 async def get_last_configs(session: AsyncSession, limit: int) -> list[ProcessedConfig]:
     result = await session.execute(
         select(ProcessedConfig)
-        .where(ProcessedConfig.is_valid == True)  # noqa: E712
+        .where(ProcessedConfig.is_valid)  # noqa: E712
         .order_by(desc(ProcessedConfig.id))
         .limit(limit)
     )
@@ -169,7 +169,7 @@ async def filter_configs(
     protocol: str | None = None,
     limit: int = 1000,
 ) -> list[ProcessedConfig]:
-    query = select(ProcessedConfig).where(ProcessedConfig.is_valid == True)  # noqa: E712
+    query = select(ProcessedConfig).where(ProcessedConfig.is_valid)  # noqa: E712
     if country_code:
         query = query.where(ProcessedConfig.country_code == country_code.upper())
     if protocol:
