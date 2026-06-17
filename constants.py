@@ -5,47 +5,77 @@ PROTOCOLS: tuple[str, ...] = ("vless", "vmess", "trojan", "shadowsocks")
 
 # نگاشت کد کشور به برچسب نمایشی در منو
 COUNTRY_LABELS: dict[str, str] = {
-    "IR": "🇮🇷 Iran",
-    "US": "🇺🇸 USA",
-    "DE": "🇩🇪 Germany",
-    "NL": "🇳🇱 Netherlands",
-    "AE": "🇦🇪 UAE",
+    "IR": "🇮🇷 ایران",
+    "US": "🇺🇸 آمریکا",
+    "DE": "🇩🇪 آلمان",
+    "NL": "🇳🇱 هلند",
+    "AE": "🇦🇪 امارات",
+    "GB": "🇬🇧 انگلیس",
+    "FR": "🇫🇷 فرانسه",
+    "JP": "🇯🇵 ژاپن",
+    "SG": "🇸🇬 سنگاپور",
+    "CA": "🇨🇦 کانادا",
+    "AU": "🇦🇺 استرالیا",
+    "FI": "🇫🇮 فنلاند",
+    "SE": "🇸🇪 سوئد",
+    "IN": "🇮🇳 هند",
+    "RU": "🇷🇺 روسیه",
+    "TR": "🇹🇷 ترکیه",
+    "KR": "🇰🇷 کره جنوبی",
+    "HK": "🇭🇰 هنگ‌کنگ",
+    "BR": "🇧🇷 برزیل",
+    "CN": "🇨🇳 چین",
 }
 
 # پرچم کشورها برای واترمارک
 COUNTRY_FLAGS: dict[str, str] = {
-    "IR": "🇮🇷",
-    "US": "🇺🇸",
-    "DE": "🇩🇪",
-    "CN": "🇨🇳",
-    "AE": "🇦🇪",
-    "NL": "🇳🇱",
-    "NZ": "🇳🇿",
-    "FI": "🇫🇮",
+    "IR": "🇮🇷", "US": "🇺🇸", "DE": "🇩🇪", "NL": "🇳🇱", "AE": "🇦🇪",
+    "GB": "🇬🇧", "FR": "🇫🇷", "JP": "🇯🇵", "SG": "🇸🇬", "CA": "🇨🇦",
+    "AU": "🇦🇺", "FI": "🇫🇮", "SE": "🇸🇪", "IN": "🇮🇳", "RU": "🇷🇺",
+    "TR": "🇹🇷", "KR": "🇰🇷", "HK": "🇭🇰", "BR": "🇧🇷", "CN": "🇨🇳",
+    "NZ": "🇳🇿", "NO": "🇳🇴", "PL": "🇵🇱", "UA": "🇺🇦", "RO": "🇷🇴",
+    "CZ": "🇨🇿", "IT": "🇮🇹", "ES": "🇪🇸", "CH": "🇨🇭", "BE": "🇧🇪",
+    "AT": "🇦🇹", "DK": "🇩🇰", "PT": "🇵🇹", "IE": "🇮🇪", "IL": "🇮🇱",
 }
 
 # regex استخراج کانفیگ از متن/HTML
+# بهبودیافته: vmess حاوی Base64 است (شامل = + /)
+# vless/trojan/ss حاوی query params با & و #fragment هستند
 CONFIG_PATTERN: str = (
-    r"(vmess://[^\s]+|"
-    r"vless://[^\s]+|"
-    r"trojan://[^\s]+|"
-    r"ss://[^\s]+)"
+    r"(vmess://[A-Za-z0-9+/=_-]+(?:#[^\s]*)?|"
+    r"vless://[^\s]+?#[^\s]*|"
+    r"vless://[^\s]+?(?=\s|$)|"
+    r"trojan://[^\s]+?#[^\s]*|"
+    r"trojan://[^\s]+?(?=\s|$)|"
+    r"ss://[A-Za-z0-9+/=_-]+@[^\s]+?#[^\s]*|"
+    r"ss://[A-Za-z0-9+/=_-]+@[^\s]+?(?=\s|$)|"
+    r"ss://[A-Za-z0-9+/=_-]+#[^\s]*|"
+    r"ss://[A-Za-z0-9+/=_-]+(?=\s|$))"
 )
 
-# محدودیت‌های export
-EXPORT_MIN_COUNT = 1
-EXPORT_MAX_COUNT = 10_000
-EXPORT_DEFAULT_LAST = 10
+# محدودیت‌های export (خروجی گرفتن کانفیگ)
+EXPORT_MIN_COUNT = 1  # حداقل تعداد کانفیگ قابل درخواست
+EXPORT_MAX_COUNT = 10_000  # حداکثر تعداد کانفیگ قابل درخواست
+EXPORT_DEFAULT_LAST = 20  # تعداد پیش‌فرض کانفیگ‌های اخیر
 
-# تنظیمات publisher
-PUBLISH_BATCH_SIZE = 3
-PUBLISH_DELAY_SECONDS = 2.2
-PUBLISH_BATCH_PAUSE_SECONDS = 6.0
-PUBLISH_MAX_RETRIES = 5
+# تنظیمات publisher (ناشر کانال تلگرام)
+PUBLISH_BATCH_SIZE = 3  # تعداد پیام در هر دسته قبل از مکث
+PUBLISH_DELAY_SECONDS = 2.2  # تأخیر بین هر پیام (ثانیه) — جلوگیری از flood limit (در حالت concurrency کمتر اثرگذار می‌شود)
+PUBLISH_BATCH_PAUSE_SECONDS = 6.0  # مکث بین دسته‌ها (ثانیه)
+PUBLISH_MAX_RETRIES = 5  # حداکثر تلاش مجدد در صورت خطای 429 (rate limit)
+PUBLISH_CONCURRENCY = 3  # تعداد ارسال‌های همزمان به کانال (محدود برای جلوگیری از 429)
 
-# تنظیمات scraper
-SCRAPER_INTERVAL_SECONDS = 300
-SCRAPER_PUBLISH_LIMIT = 20
 
-# ping validation
-PING_TIMEOUT_SECONDS = 4.0
+# تنظیمات scraper (جمع‌آوری کانفیگ)
+SCRAPER_INTERVAL_SECONDS = 300  # فاصله زمانی بین اجراهای اسکرپر (ثانیه)
+SCRAPER_PUBLISH_LIMIT = 20  # حداکثر تعداد کانفیگ برای انتشار بعد از هر اسکرپ
+
+# تنظیمات اعتبارسنجی ping
+PING_TIMEOUT_SECONDS = 4.0  # مهلت پاسخ‌دهی سرور (ثانیه)
+
+# تنظیمات broadcast (ارسال پیام به کاربران)
+BROADCAST_DELAY_SECONDS = 0.05  # تأخیر بین هر پیام broadcast (ثانیه)
+
+# تنظیمات پیش‌فرض Clean IP (آی‌پی‌های تمیز)
+CLEAN_IP_DEFAULT_COUNT = 100  # تعداد پیش‌فرض آی‌پی تمیز
+CLEAN_IP_MAX_PER_REQUEST = 5000  # حداکثر تعداد آی‌پی تمیز در هر درخواست

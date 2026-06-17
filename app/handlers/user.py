@@ -1,4 +1,5 @@
 # app/handlers/user.py — handlerهای کاربر (منو، export، فیلتر)
+# تمام پیام‌ها و لاگ‌ها به فارسی حرفه‌ای
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ from telegram.ext import ContextTypes
 
 from app.bot.menus_refactor import country_menu, main_menu, protocol_menu
 from app.middlewares.auth import is_admin
-from constants import EXPORT_DEFAULT_LAST, EXPORT_MAX_COUNT, EXPORT_MIN_COUNT
+from constants import COUNTRY_LABELS, EXPORT_DEFAULT_LAST, EXPORT_MAX_COUNT, EXPORT_MIN_COUNT
 from core.config import BASE_DIR
 from core.logger import get_logger
 from database.crud import filter_configs, get_last_configs
@@ -37,7 +38,7 @@ def _build_export_file(configs: list, filename: str) -> Path:
                 f.write(text + "\n\n")
         return path
     except Exception as exc:
-        logger.error("Error building export file {}: {}", filename, exc)
+        logger.error("Error building output file {}: {}", filename, exc)
         raise
 
 
@@ -63,12 +64,23 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             admin = await is_admin(session, user.id)
 
         await update.message.reply_text(
-            "👋 به ربات Config Manager خوش آمدید!\nاز منوی زیر استفاده کنید:",
+            "👋 <b>به ربات Config Manager خوش آمدید!</b>\n\n"
+            "💡 از منوی زیر گزینه مورد نظر را انتخاب کنید:\n"
+            "🌍 <b>کشورها</b> — دریافت کانفیگ بر اساس کشور\n"
+            "⚙️ <b>پروتکل</b> — فیلتر بر اساس نوع پروتکل\n"
+            "📦 <b>آخرین ۲۰</b> — دریافت ۲۰ کانفیگ اخیر\n"
+            "🔢 <b>دلخواه</b> — دریافت تعداد دلخواه کانفیگ",
+            parse_mode="HTML",
             reply_markup=main_menu(admin),
         )
+        logger.info("User {} ({}) started the bot", user.id, user.first_name)
     except Exception as exc:
-        logger.error("Error in start command for user {}: {}", user.id, exc)
-        await update.message.reply_text("❌ خطا در ثبت‌نام. لطفا بعدا تلاش کنید.")
+        logger.error("Error registering user {}: {}", user.id, exc)
+        await update.message.reply_text(
+            "❌ <b>خطا در ثبت‌نام!</b>\n\n"
+            "⚠️ لطفاً بعداً تلاش کنید.",
+            parse_mode="HTML",
+        )
 
 
 async def user_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -80,85 +92,134 @@ async def user_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
     data = query.data
     user_id = query.from_user.id
 
-    # ─── Navigation ───
+    # ─── بازگشت به منوی اصلی ───
     if data == "back_main":
         context.user_data.clear()
         await query.edit_message_text(
-            "🏠 منوی اصلی",
+            "🏠 <b>منوی اصلی</b>\n\n"
+            "💡 گزینه مورد نظر خود را انتخاب کنید:",
+            parse_mode="HTML",
             reply_markup=main_menu(await _admin_flag(user_id)),
         )
         return True
 
+    # ─── منوی کشورها ───
     if data == "menu_country":
-        await query.edit_message_text("🌍 کشور را انتخاب کنید:", reply_markup=country_menu())
+        await query.edit_message_text(
+            "🌍 <b>انتخاب کشور</b>\n\n"
+            "💡 کشور مورد نظر خود را انتخاب کنید تا کانفیگ‌های آن کشور نمایش داده شود:",
+            parse_mode="HTML",
+            reply_markup=country_menu(),
+        )
         return True
 
+    # ─── منوی پروتکل ───
     if data == "menu_protocol":
         context.user_data.pop("country", None)
-        await query.edit_message_text("⚙️ پروتکل را انتخاب کنید:", reply_markup=protocol_menu())
+        await query.edit_message_text(
+            "⚙️ <b>انتخاب پروتکل</b>\n\n"
+            "💡 پروتکل مورد نظر خود را انتخاب کنید:\n"
+            "• 🔵 VLESS — سریع و سبک\n"
+            "• 🟡 VMESS — پایدار و محبوب\n"
+            "• 🟣 TROJAN — امن و قابل‌اعتماد\n"
+            "• ⚫ SHADOWSOCKS — ساده و کارآمد",
+            parse_mode="HTML",
+            reply_markup=protocol_menu(),
+        )
         return True
 
+    # ─── تعداد دلخواه ───
     if data == "menu_custom":
         context.user_data["awaiting_count"] = True
-        await query.edit_message_text("🔢 تعداد مورد نظر را ارسال کنید (۱ تا ۱۰۰۰۰):")
+        await query.edit_message_text(
+            "🔢 <b>دریافت کانفیگ دلخواه</b>\n\n"
+            "📌 تعداد کانفیگ مورد نظر خود را ارسال کنید.\n"
+            f"📝 محدوده: از <b>{EXPORT_MIN_COUNT}</b> تا <b>{EXPORT_MAX_COUNT}</b>",
+            parse_mode="HTML",
+        )
         return True
 
-    # ─── Export last N ───
+    # ─── آخرین ۲۰ کانفیگ ───
     if data == "last_20":
         try:
-            await query.edit_message_text("📦 در حال آماده‌سازی...")
+            await query.edit_message_text("📦 <b>در حال آماده‌سازی...</b>", parse_mode="HTML")
             factory = get_session_factory()
             async with factory() as session:
                 rows = await get_last_configs(session, EXPORT_DEFAULT_LAST * 2)
             if not rows:
-                await query.message.reply_text("❌ کانفیگی یافت نشد.", reply_markup=main_menu(await _admin_flag(user_id)))
+                await query.message.reply_text(
+                    "❌ <b>کانفیگی یافت نشد!</b>\n\n"
+                    "⚠️ هنوز کانفیگی در دیتابیس ثبت نشده است.\n"
+                    "💡 لطفاً بعداً تلاش کنید.",
+                    parse_mode="HTML",
+                    reply_markup=main_menu(await _admin_flag(user_id)),
+                )
                 return True
 
-            # Build text from last 20
             text = _build_export_text(rows[:20])
 
-            # Try to send as text message
             if len(text) < 3800:
                 try:
                     await query.message.reply_text(
-                        f"<pre>{text}</pre>",
-                        parse_mode="HTML"
+                        f"📦 <b>آخرین ۲۰ کانفیگ</b>\n\n<pre>{text}</pre>",
+                        parse_mode="HTML",
                     )
-                    await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
                 except Exception:
-                    # Fallback to file if text too long
-                    logger.warning("Text message too long, falling back to file")
+                    logger.warning("Output text too long, sending as file")
                     path = _build_export_file(rows[:20], "last_20")
                     with open(path, "rb") as doc:
-                        await query.message.reply_document(document=doc, caption="📦 آخرین ۲۰ کانفیگ")
-                    await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+                        await query.message.reply_document(
+                            document=doc,
+                            caption="📦 آخرین ۲۰ کانفیگ",
+                        )
             else:
-                # Send as file if too long
                 path = _build_export_file(rows[:20], "last_20")
                 with open(path, "rb") as doc:
-                    await query.message.reply_document(document=doc, caption="📦 آخرین ۲۰ کانفیگ")
-                await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+                    await query.message.reply_document(
+                        document=doc,
+                        caption="📦 آخرین ۲۰ کانفیگ",
+                    )
+            await query.message.reply_text(
+                "🏠 <b>منوی اصلی</b>",
+                parse_mode="HTML",
+                reply_markup=main_menu(await _admin_flag(user_id)),
+            )
         except Exception as exc:
-            logger.error("Error in last_20 export: {}", exc)
-            await query.message.reply_text(f"❌ خطا: {exc}", reply_markup=main_menu(await _admin_flag(user_id)))
+            logger.error("Error sending last 20 configs: {}", exc)
+            await query.message.reply_text(
+                f"❌ <b>خطا در دریافت کانفیگ!</b>\n\n{exc}",
+                parse_mode="HTML",
+                reply_markup=main_menu(await _admin_flag(user_id)),
+            )
         return True
 
-    # ─── Country select ───
+    # ─── انتخاب کشور ───
     if data.startswith("country_"):
         country = data.replace("country_", "")
         context.user_data["country"] = country
+        from core.utils import get_flag
+        flag = get_flag(country)
+        country_name = COUNTRY_LABELS.get(country, country) if COUNTRY_LABELS else country
         await query.edit_message_text(
-            f"🌍 کشور: {country}\n⚙️ پروتکل را انتخاب کنید:",
+            f"{flag} <b>کشور: {country_name}</b>\n\n"
+            "⚙️ حالا پروتکل مورد نظر خود را انتخاب کنید:",
+            parse_mode="HTML",
             reply_markup=protocol_menu("menu_country"),
         )
         return True
 
-    # ─── Protocol filter ───
+    # ─── فیلتر پروتکل ───
     if data.startswith("proto_"):
         try:
             proto = data.replace("proto_", "")
             country = context.user_data.get("country")
-            await query.edit_message_text(f"⏳ فیلتر...\n🌍 {country or 'همه'} | ⚙️ {proto}")
+            from core.utils import get_flag
+            flag = get_flag(country) if country else "🌍"
+            country_display = country or "همه"
+            await query.edit_message_text(
+                f"⏳ <b>در حال فیلتر...</b>\n{flag} {country_display} | ⚙️ {proto}",
+                parse_mode="HTML",
+            )
 
             factory = get_session_factory()
             async with factory() as session:
@@ -171,18 +232,49 @@ async def user_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> b
 
             if not rows:
                 await query.message.reply_text(
-                    "❌ کانفیگی یافت نشد.",
+                    "❌ <b>کانفیگی یافت نشد!</b>\n\n"
+                    f"🔍 فیلتر: {flag} {country_display} | ⚙️ {proto}\n"
+                    "💡 لطفاً فیلتر دیگری را امتحان کنید.",
+                    parse_mode="HTML",
                     reply_markup=main_menu(await _admin_flag(user_id)),
                 )
                 return True
 
-            path = _build_export_file(rows, f"{country or 'all'}_{proto}")
-            with open(path, "rb") as doc:
-                await query.message.reply_document(document=doc, caption=f"📦 تعداد: {len(rows)}")
-            await query.message.reply_text("🏠 منوی اصلی", reply_markup=main_menu(await _admin_flag(user_id)))
+            text = _build_export_text(rows)
+            if len(text) < 3800:
+                try:
+                    await query.message.reply_text(
+                        f"{flag} <b>{country_display}</b> | ⚙️ {proto}\n"
+                        f"📦 تعداد: <b>{len(rows)}</b>\n\n"
+                        f"<pre>{text}</pre>",
+                        parse_mode="HTML",
+                    )
+                except Exception:
+                    path = _build_export_file(rows, f"{country or 'all'}_{proto}")
+                    with open(path, "rb") as doc:
+                        await query.message.reply_document(
+                            document=doc,
+                            caption=f"📦 {flag} {country_display} | {proto} | تعداد: {len(rows)}",
+                        )
+            else:
+                path = _build_export_file(rows, f"{country or 'all'}_{proto}")
+                with open(path, "rb") as doc:
+                    await query.message.reply_document(
+                        document=doc,
+                        caption=f"📦 {flag} {country_display} | {proto} | تعداد: {len(rows)}",
+                    )
+            await query.message.reply_text(
+                "🏠 <b>منوی اصلی</b>",
+                parse_mode="HTML",
+                reply_markup=main_menu(await _admin_flag(user_id)),
+            )
         except Exception as exc:
-            logger.error("Error in protocol filter: {}", exc)
-            await query.message.reply_text(f"❌ خطا: {exc}", reply_markup=main_menu(await _admin_flag(user_id)))
+            logger.error("Error filtering protocol: {}", exc)
+            await query.message.reply_text(
+                f"❌ <b>خطا در فیلتر!</b>\n\n{exc}",
+                parse_mode="HTML",
+                reply_markup=main_menu(await _admin_flag(user_id)),
+            )
         return True
 
     return False
@@ -202,9 +294,11 @@ async def handle_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if count < EXPORT_MIN_COUNT or count > EXPORT_MAX_COUNT:
             raise ValueError(f"تعداد باید بین {EXPORT_MIN_COUNT} و {EXPORT_MAX_COUNT} باشد")
     except ValueError as exc:
-        logger.warning("Invalid count input from user {}: {}", user_id, exc)
+        logger.warning("Invalid count from user {}: {}", user_id, exc)
         await update.message.reply_text(
-            f"❌ عدد نامعتبر (بین {EXPORT_MIN_COUNT} و {EXPORT_MAX_COUNT})",
+            f"❌ <b>عدد نامعتبر!</b>\n\n"
+            f"📌 لطفاً عددی بین <b>{EXPORT_MIN_COUNT}</b> و <b>{EXPORT_MAX_COUNT}</b> وارد کنید.",
+            parse_mode="HTML",
             reply_markup=main_menu(await _admin_flag(user_id)),
         )
         return True
@@ -215,15 +309,33 @@ async def handle_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             rows = await get_last_configs(session, count)
 
         if not rows:
-            await update.message.reply_text("❌ کانفیگی یافت نشد.", reply_markup=main_menu(await _admin_flag(user_id)))
+            await update.message.reply_text(
+                "❌ <b>کانفیگی یافت نشد!</b>\n\n"
+                "⚠️ هنوز کانفیگی در دیتابیس ثبت نشده است.",
+                parse_mode="HTML",
+                reply_markup=main_menu(await _admin_flag(user_id)),
+            )
             return True
 
         path = _build_export_file(rows, f"custom_{count}")
         with open(path, "rb") as doc:
-            await update.message.reply_document(document=doc, caption=f"📦 {len(rows)} کانفیگ")
-        await update.message.reply_text("✅ انجام شد", reply_markup=main_menu(await _admin_flag(user_id)))
+            await update.message.reply_document(
+                document=doc,
+                caption=f"📦 <b>{len(rows)} کانفیگ</b>",
+                parse_mode="HTML",
+            )
+        await update.message.reply_text(
+            "✅ <b>کانفیگ‌ها با موفقیت ارسال شد!</b>",
+            parse_mode="HTML",
+            reply_markup=main_menu(await _admin_flag(user_id)),
+        )
+        logger.info("User {} received {} configs", user_id, count)
     except Exception as exc:
-        logger.error("Error in custom count export for user {}: {}", user_id, exc)
-        await update.message.reply_text(f"❌ خطا: {exc}", reply_markup=main_menu(await _admin_flag(user_id)))
+        logger.error("Error sending custom configs to user {}: {}", user_id, exc)
+        await update.message.reply_text(
+            f"❌ <b>خطا در دریافت کانفیگ!</b>\n\n{exc}",
+            parse_mode="HTML",
+            reply_markup=main_menu(await _admin_flag(user_id)),
+        )
 
     return True

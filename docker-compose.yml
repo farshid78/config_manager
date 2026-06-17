@@ -1,6 +1,13 @@
+# docker-compose.yml
+# SQLite (default): docker compose up bot
+# PostgreSQL:         set DATABASE_URL in .env and uncomment db service
+# این فایل برای اجرای پروژه روی پلتفرم‌های مختلف بهینه شده است
+
 services:
+  # سرویس پایگاه داده (اختیاری - برای استفاده PostgreSQL را uncomment کنید)
   db:
     image: postgres:16-alpine
+    platform: linux/amd64  # پشتیبانی از معماری‌های مختلف
     environment:
       POSTGRES_USER: configbot
       POSTGRES_PASSWORD: configbot
@@ -14,16 +21,52 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
+  # سرویس اصلی برنامه
   bot:
-    build: .
+    build:
+      context: .
+      # تعریف پلتفرم برای پشتیبانی از معماری‌های مختلف
+      # در هنگام build می‌توانید از --build-arg TARGETPLATFORM=platform/architecture استفاده کنید
+      # مثال: docker-compose build --build-arg TARGETPLATFORM=linux/arm/v7
+    platform: ${TARGETPLATFORM:-linux/amd64}  # استفاده از متغیر محیطی یا پیش‌فرض linux/amd64
     env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://configbot:configbot@db:5432/configbot
+    volumes:
+      # نگهداری داده‌ها بین اجراهای مختلف
+      - bot_data:/app/data
+      # نگهداری لاگ‌ها
+      - bot_logs:/app/logs
+    # وابستگی به پایگاه داده (اگر استفاده شود)
     depends_on:
       db:
         condition: service_healthy
+    # تنظیمات مجدد خودکار در صورت نیاز
     restart: unless-stopped
+    # محدودیت منابع (اختیاری)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # تنظیمات شبکه
+    networks:
+      - app-network
 
+# تعریف حجم‌های داده برای ذخیره‌سازی دائم
 volumes:
+  bot_data:
+    driver: local
+  bot_logs:
+    driver: local
   pgdata:
+    driver: local
+
+# تعریف شبکه برای ارتباط بین سرویس‌ها
+networks:
+  app-network:
+    driver: bridge
+
