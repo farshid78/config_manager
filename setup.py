@@ -21,7 +21,8 @@ setup(
     ],
     python_requires=">=3.8",
     description="Automated V2Ray Config Collector, Validator & Publisher",
-    long_description=open("README.md").read(),
+    long_description=(open("README.md", encoding="utf-8").read() if __name__ != "__main__" else ""),
+
     long_description_content_type="text/markdown",
     author="Config Manager Team",
     url="https://github.com/config-manager/config-manager",
